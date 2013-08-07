@@ -25,7 +25,7 @@ MYSQL_DB="" # База данных MySQL
 TIMEZONE="Europe/Moscow" 
 CRON_BACKUP="0  3    * * *   $USER   " # Время и пользователь для создания резервных копий
 SERVER_IP="" # IP-адрес сервера
-SFTP_PORT=`grep -r 'Port' /etc/ssh/sshd_config | cut -c5-10` # Порт SFTP
+SFTP_PORT=`grep -r 'Port' /etc/ssh/sshd_config | cut -c5-10` # Определяем SFTP
 PMA_ADDR="$USER/PhpMyAdmin" # Адрес PhpMyAdmin
 GROUP=sftp_users # Группа, члены которой имеют право на подключение по sftp
 
@@ -86,50 +86,53 @@ GROUP=sftp_users # Группа, члены которой имеют право
 	mkdir -p /home/$USER/www/public_html
 	mkdir -p /home/$USER/www/tmp
 	mkdir -p /home/$USER/www/backups
+	
+	# Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
+	groupadd $USER
+	useradd $USER -G $GROUP -g $USER -s /bin/false -d /home/$USER/www # Создаем пользователя
+	echo -e ""$SFTP_PASS"\n"$SFTP_PASS"" | passwd --quiet $USER
 
-        # Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
- 		groupadd $USER
-		useradd $USER -G $GROUP -g $USER -s /bin/false -d /home/$USER/www # Создаем пользователя
-        echo -e ""$SFTP_PASS"\n"$SFTP_PASS"" | passwd --quiet $USER
+	# Назначаем владельца и права на каталоги
+	chown -R $USER:$USER "/home/$USER/www";
 
-        # Назначаем владельца и права на каталоги
-        chown -R $USER:$USER "/home/$USER/www";
+	find "/home/$USER/www/public_html" -type d -exec chmod 0755 '{}' \;
+	find "/home/$USER/www/public_html" -type f -exec chmod 0644 '{}' \;
 
-        find "/home/$USER/www/public_html" -type d -exec chmod 0755 '{}' \;
-        find "/home/$USER/www/public_html" -type f -exec chmod 0644 '{}' \;
+	find "/home/$USER/www/backups" -type d -exec chmod 0755 '{}' \;
+	find "/home/$USER/www/backups" -type f -exec chmod 0644 '{}' \;
 
-        find "/home/$USER/www/backups" -type d -exec chmod 0755 '{}' \;
-        find "/home/$USER/www/backups" -type f -exec chmod 0644 '{}' \;
-
-        find "/home/$USER/www/tmp" -type d -exec chmod 0755 '{}' \;
-        find "/home/$USER/www/tmp" -type f -exec chmod 0777 '{}' \;
+	find "/home/$USER/www/tmp" -type d -exec chmod 0755 '{}' \;
+	find "/home/$USER/www/tmp" -type f -exec chmod 0777 '{}' \;
 
 
 ###### СОЗАДНИЕ БАЗЫ ДАННЫХ ДЛЯ НОВОГО САЙТА ######
 
-		# Заменяем точку в имени на подчеркивание, т.к. MySQL иначе выдает ошибку
-		MYSQL_DB=`echo ${USER//./_}`
-		
-		# Создаем базу и пользователя, даем права
-		mysql -u root -p"$MYSQL_ROOT_PASS" -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DB; GRANT ALL PRIVILEGES ON  $MYSQL_DB.* TO $MYSQL_DB@localhost;"
+	# Заменяем точку в имени на подчеркивание, т.к. MySQL иначе выдает ошибку
+	MYSQL_DB=`echo ${USER//./_}`
+
+	# Создаем базу и пользователя, даем права
+	mysql -u root -p"$MYSQL_ROOT_PASS" -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DB; GRANT ALL PRIVILEGES ON  $MYSQL_DB.* TO $MYSQL_DB@localhost;"
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА ВИРУТАЛЬНОГО ХОСТА NGINX ######
 
-		echo "
+	echo "
 upstream backend-$USER {server unix:/var/run/$USER-phpfpm-pool.sock}
 
 server {
+	# Указываем домен
     server_name $USER www.$USER;
 
+    # Указываем каталог файлов сайта
     root /home/$USER/www/public_html;
 
+    # Указываем пути и имена логов
     access_log /var/log/nginx/$USER-access.log;
 	error_log /var/log/nginx/$USER-error.log;
 
-	# Типовые настройки общие для всех доменов (если не захочется экзотики)
+	# Какие файлы будут переданы браузеру при обращениик домену
 	index.html index.php;
 
-	# Реализуем красивые ссылки для Drupal (и для ряда других CMS)
+	# Реализуем красивые ссылки для многих CMS
 	location /
 	{
         try_files $uri $uri/ /index.php?q=$uri&$args;
@@ -141,12 +144,14 @@ server {
         deny all;
 	}
 
+	# Указываем, что не надо писать в лог, если фавикон не найден
 	location = /favicon.ico
 	{
         log_not_found off;
         access_log off;
 	}
 
+	# Разрешаем всем доступ к robots.txt и отключаем запись в лог обращений нему
 	location = /robots.txt
 	{
         allow all;
@@ -157,6 +162,7 @@ server {
 	# Передаём обработку PHP-скриптов PHP-FPM
 	location ~ \.php$
 	{
+		# Если файл не найден или ссылка не открывается, то будет открыта главная страница
         try_files $uri =/;
 
         # PHP-FPM слушает на Unix сокете
@@ -165,10 +171,10 @@ server {
         # Использовать cache зона one
         fastcgi_cache  one;
 
-        # Помещать страницу в кеш, после 3-х использований. Меньшее число вызвало у меня труднообъяснимые глюки на формах регистрации
+        # Помещать страницу в кеш, после 3-х использований.
         fastcgi_cache_min_uses 3;
 
-        # Кешировать перечисленные ответы
+        # Кешировать перечисленные ответы в течении 5 минут
         fastcgi_cache_valid 200 301 302 304 5m;
 
         # Формат ключа кеша - по этому ключу nginx находит правильную страничку
@@ -191,67 +197,112 @@ server {
         fastcgi_param       SCRIPT_FILENAME  $document_root$fastcgi_script_name;
         fastcgi_ignore_client_abort     off;
 	}			
-				}
-		" > /etc/nginx/sites-available//$USER.conf
+}
+
+	" > /etc/nginx/sites-available//$USER.conf
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА PHP-FPM ######
 
-        echo "
-        	[$USER]
+	echo "
+[$USER]
 
-	        include=/etc/php5/fpm/templates/default.conf
+listen = /var/run/$USER-phpfpm-pool.sock
+listen.mode = 0666
+user = $USER
+group = $USER
+chdir = /home/$USER/www
 
-        " > /etc/php5/fpm/pool.d/$USER-phpfpm-pool.conf
+php_admin_value[upload_tmp_dir] = /home/$USER/www/tmp
+php_admin_value[upload_max_filesize] = 10M
+php_admin_value[post_max_size] = 10M
+php_admin_value[open_basedir] = /home/$USER/www/
+php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,popen,curl_multi_exec,parse_ini_file,show_source
+php_admin_value[cgi.fix_pathinfo] = 0
+php_admin_value[date.timezone] = Europe/Moscow
+php_admin_value[session.save_path] = /home/$USER/www/tmp
+
+slowlog = /var/log/phpfpm-slowlog/$USER-php-slow.log
+
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 2
+pm.max_spare_servers = 4
+
+	" > /etc/php5/fpm/pool.d/$USER-phpfpm-pool.conf
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА РЕЗЕРВНОГО КОПИРОВАНИЯ ######
 
-        echo "  
-        	
-        	\'$USER'=$USER
-        	include /etc/nginx/templates/backup.conf
+	echo "  
+#!/bin/bash
 
-        " > /home/$USER/www/backups/$USER-backup.sh
+OLD=2                                          # Сколько дней хранить резервные копии
+DATE=`date '+%F_%H-%M'`                        # Формат даты
 
-        chmod +x /home/$USER/www/backups/$USER-backup.sh
+# Создаем каталог под новый бекап
 
-        # Добавляем задание резервного копирования в crontab
-        echo "$CRON_BACKUP sh /home/$USER/www/backups/$USER-backup.sh " >> /etc/crontab
+mkdir /home/$USER/www/backups/$DATE
+cd /home/$USER/www/backups/$DATE
+
+# Создаем и архивируем резервную копию БД пользователя
+
+mysqldump -u '$USER' -p'$MYSQL_PASS' --skip-lock-tables '$MYSQL_DB' > DB-$MYSQL_DB.sql;
+
+tar -cjf ./DB-$MYSQL_DB.tar.bz2 ./DB-$MYSQL_DB.sql
+rm -rf ./DB-$MYSQL_DB.sql
+
+# Создаем архив резервной копии файлов сайта
+
+tar -cjf ./FILES-$USER.tar.bz2 /home/$USER/www/public_html
+
+# Проверяем наличие бекапов старее, чем определено в OLD и удаляем их
+
+find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
+
+	" > /home/$USER/www/backups/$USER-backup.sh
+
+	# Делаем скрипт резервного копирования исполняемым
+	chmod +x /home/$USER/www/backups/$USER-backup.sh
+
+	# Добавляем задание резервного копирования в crontab
+	echo "$CRON_BACKUP sh /home/$USER/www/backups/$USER-backup.sh " >> /etc/crontab
 
 ###### ПЕРЕЗАПУСК ДЕМОНОВ ######
 
-        service nginx reload
-        service php5-fpm reload
+	service nginx reload
+	service php5-fpm reload
 
 ###### ВЫВОД И ОТПРАВКА ПО E-MAIL УЧЕТНЫХ И ПРОЧИХ НЕОБХОДИЫМХ ДАННЫХ ######
 
-        echo " 
-        	Уважаемый, администратор сайта $USER !
+	echo " 
+	Уважаемый, администратор сайта $USER !
 
-	        Для Вас было подготовлено необходимое окружение для размещения веб-сайта $USER .
+	Для Вас было подготовлено необходимое окружение для размещения веб-сайта $USER .
 
-        	Ниже приведены параметры окружения:
+	Ниже приведены параметры окружения:
 
- 		       	Сайт: $USER
-    		   	Пользователь SFTP: $USER
-        		Пароль пользователя SFTP: $SFTP_PASS
-        		База данных MySQL: $MYSQL_DB
-        		Пользователь MySQL: $MYSQL_DB
-        		Пароль пользователя MySQL: $MYSQL_PASS
+	Сайт: $USER
+	Пользователь SFTP: $USER
+	Пароль пользователя SFTP: $SFTP_PASS
+	База данных MySQL: $MYSQL_DB
+	Пользователь MySQL: $MYSQL_DB
+	Пароль пользователя MySQL: $MYSQL_PASS
 
-	        Обращаем Ваше внимание, что для подключения к серверу необходимо использовать следующие параметры:
+	Обращаем Ваше внимание, что для подключения к серверу необходимо использовать следующие параметры:
 
-    		    IP-адрес сервера: $SERVER_IP
-        		Порт SFTP: $SFTP_PORT
-        		Адрес PhpMyAdmin: $PMA_ADDR
+	IP-адрес сервера: $SERVER_IP
+	Порт SFTP: $SFTP_PORT
+	Адрес PhpMyAdmin: $PMA_ADDR
 
-	        С Уважением,
-    	    техническая поддержка Net-Simple.
-        	https://net-simple.ru
-        " > /home/$USER/$USER-site.txt
+	С Уважением,
+	Техническая поддержка Net-Simple.
+	https://net-simple.ru
 
-        cat /home/$USER/$USER-site.txt
-        cat /home/$USER/$USER-site.txt | iconv -f utf8 -t koi8-r | mail -s "Net-Simple: $USER site settings" $USER_EMAIL tia@net-simple.ru
+	" > /home/$USER/$USER-site.txt
+
+	chown -R $USER:$USER "/home/$USER/$USER-site.txt"
+
+	cat /home/$USER/$USER-site.txt
+	cat /home/$USER/$USER-site.txt | iconv -f utf8 -t koi8-r | mail -s "Net-Simple: $USER site settings" $USER_EMAIL
 
 exit
-
-bewitchment.ru
