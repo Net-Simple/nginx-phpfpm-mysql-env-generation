@@ -2,12 +2,11 @@
 #######################################################################################
 #                                                                                     #
 # Скрипт автоматического создания окружения для php-приложения, версия 2.             #
-# Создается системный пользователь, все необходимые каталоги, устанавливаются права   #
+# Создается пользователь, все необходимые каталоги, устанавливаются права             #
 # Создается пользователь и база данных MySQL                                          #
 # Создаются все необходимые конфигурационные файлы (nginx, php5-fpm, backup)          #
 # Перезапускаются сервисы (nginx, php5-fpm)                                           #
-# На e-mail администратора сайта и администратора сервера высылается уведомление с    #
-# всеми параметрами                                                                   #
+# На e-mail администратора сайта высылается уведомление с всеми параметрами           #                                                        #
 #                                                                                     #
 # Скрипт разработан в компании Net-Simple. Разрешено свободное использование          #
 # http://net-simple.ru info@net-simple.ru                                             #
@@ -264,6 +263,9 @@ find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
 	# Делаем скрипт резервного копирования исполняемым
 	chmod +x /home/$USER/www/backups/$USER-backup.sh
 
+	# Меняем владельца скрипта на пользователя сайта
+	chown -R $USER:$USER /home/$USER/www/backups/$USER-backup.sh
+
 	# Добавляем задание резервного копирования в crontab
 	echo "$CRON_BACKUP sh /home/$USER/www/backups/$USER-backup.sh " >> /etc/crontab
 
@@ -300,7 +302,7 @@ find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
 
 	" > /home/$USER/$USER-site.txt
 
-	chown -R $USER:$USER "/home/$USER/$USER-site.txt"
+	chown -R $USER:$USER /home/$USER/$USER-site.txt
 
 	cat /home/$USER/$USER-site.txt
 	cat /home/$USER/$USER-site.txt | iconv -f utf8 -t koi8-r | mail -s "Net-Simple: $USER site settings" $USER_EMAIL
