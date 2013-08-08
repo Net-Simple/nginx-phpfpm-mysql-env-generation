@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #######################################################################################
 #                                                                                     #
 # Предварительно необходимо использовать скрипт установки ПО на сервер или установить #
@@ -26,9 +27,9 @@ MYSQL_DB="" # База данных MySQL
 TIMEZONE="Europe/Moscow" 
 CRON_BACKUP="0  3    * * *   $USER   " # Время и пользователь для создания резервных копий
 SERVER_IP="" # IP-адрес сервера
-SFTP_PORT=`grep -r 'Port' /etc/ssh/sshd_config | cut -c5-10` # Определяем SFTP
+SFTP_PORT=`grep -r 'Port' /etc/ssh/sshd_config | awk '{print $2}'` # Определяем SFTP
 PMA_ADDR="$USER/PhpMyAdmin" # Адрес PhpMyAdmin
-GROUP=sftp_users # Группа, члены которой имеют право на подключение по sftp
+SFTP_GROUP=`grep -r 'Match Group' /etc/ssh/sshd_config | awk '{print $3}'` # Группа, члены которой имеют право на подключение по sftp
 
 ###### ПОЛУЧЕНИЕ НЕОБХОДИЫХ ДАННЫХ ######
 
@@ -47,6 +48,9 @@ GROUP=sftp_users # Группа, члены которой имеют право
 			ETH0="`/sbin/ifconfig $DEV | awk -F: '/inet addr/ {print $2}'`"; 
 			SERVER_IP="`echo $ETH0 | awk -F" " '{print $1}'`"; 
 		fi
+
+	# Определяем $SFTP_GROUP
+
 
 ###### ПРОВЕРКИ КОРРЕКТНОСТИ ВВОДА ИНФОРМАЦИИ ######
 
@@ -90,11 +94,14 @@ GROUP=sftp_users # Группа, члены которой имеют право
 	
 	# Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
 	groupadd $USER
-	useradd $USER -G $GROUP -g $USER -s /bin/false -d /home/$USER/www # Создаем пользователя
+	useradd $USER -G $SFTP_GROUP -g $USER -s /bin/false -d /home/$USER/ # Создаем пользователя
 	echo -e ""$SFTP_PASS"\n"$SFTP_PASS"" | passwd --quiet $USER
 
+	# Назначаем владельцем домашнего каталога пользователя root. Необходимо для chroot SFTP
+	chown root:$SFTP_GROUP /home/$USER
+
 	# Назначаем владельца и права на каталоги
-	chown -R $USER:$USER "/home/$USER/www";
+	chown -R $USER:$USER "/home/$USER/www"
 
 	find "/home/$USER/www/public_html" -type d -exec chmod 0755 '{}' \;
 	find "/home/$USER/www/public_html" -type f -exec chmod 0644 '{}' \;
