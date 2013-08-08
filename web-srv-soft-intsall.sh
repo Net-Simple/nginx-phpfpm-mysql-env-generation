@@ -130,10 +130,13 @@ apt-get install nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi 
 
 ###### БАЗОВЫЕ НАСТРОЙКИ ######
 
+# Создаем каталог для логов медленных запросов php
 mkdir /var/log/phpfpm-slowlog
 
 # NGINX
+
 mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.orig
+
 echo "
 # Пользователь с правами которого работает nginx
 user www-data;
@@ -215,3 +218,17 @@ http {
 
 echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini
 echo cgi.fix_pathinfo = 0 >> /etc/php5/fpm/php.ini 
+echo "
+apc.enabled=1
+apc.shm_segments=1
+apc.shm_size=32
+apc.ttl=7200
+apc.user_ttl=7200
+apc.num_files_hint=1024
+apc.mmap_file_mask=/tmp/apc.XXXXXX
+apc.max_file_size = 200M
+apc.post_max_size = 200M
+apc.upload_max_filesize = 200M
+apc.enable_cli=1
+apc.rfc1867=1
+" >> /etc/php5/fpm/conf.d/20-apc.ini

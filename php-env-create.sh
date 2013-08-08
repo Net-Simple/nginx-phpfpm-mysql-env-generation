@@ -239,6 +239,7 @@ php_admin_value[date.timezone] = Europe/Moscow
 php_admin_value[session.save_path] = /home/$USER/www/tmp
 php_admin_value[session.auto_start] = 0
 
+request_slowlog_timeout = 5s
 slowlog = /var/log/phpfpm-slowlog/$USER-php-slow.log
 
 pm = dynamic
