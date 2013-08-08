@@ -92,3 +92,28 @@ ChrootDirectory %h
 ForceCommand internal-sftp
 
 " > /etc/ssh/sshd_config
+
+###### ТЮНИНГУЕМ ЯДРО ######
+
+echo net.ipv4.tcp_syncookies = 1 >> /etc/sysctl.conf
+echo net.ipv4.icmp_echo_ignore_all = 1 >> /etc/sysctl.conf
+echo net.ipv4.tcp_max_syn_backlog = 4096 >> /etc/sysctl.conf
+echo net.core.netdev_max_backlog = 30000 >> /etc/sysctl.conf
+echo net.ipv4.tcp_synack_retries = 1 >> /etc/sysctl.conf
+echo net.ipv4.conf.default.rp_filter = 1 >> /etc/sysctl.conf
+echo net.ipv4.tcp_keepalive_time = 60 >> /etc/sysctl.conf
+echo net.ipv4.tcp_keepalive_intvl = 10 >> /etc/sysctl.conf
+echo net.ipv4.tcp_keepalive_probes = 5 >> /etc/sysctl.conf
+echo net.ipv4.conf.all.accept_source_route = 0 >> /etc/sysctl.conf
+echo net.ipv4.conf.all.accept_redirects = 0 >> /etc/sysctl.conf
+echo net.ipv4.icmp_echo_ignore_broadcasts = 1 >> /etc/sysctl.conf
+echo net.core.somaxconn = 4096  >> /etc/sysctl.conf
+echo net.ipv4.tcp_max_orphans = 2255360  >> /etc/sysctl.conf
+echo net.ipv4.tcp_fin_timeout = 10  >> /etc/sysctl.conf
+echo kernel.msgmnb = 65536  >> /etc/sysctl.conf
+echo kernel.msgmax = 65536  >> /etc/sysctl.conf
+echo kernel.shmmax = 494967295  >> /etc/sysctl.conf
+echo kernel.shmall = 268435456  >> /etc/sysctl.conf
+
+###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
+
