@@ -232,3 +232,8 @@ apc.upload_max_filesize = 200M
 apc.enable_cli=1
 apc.rfc1867=1
 " >> /etc/php5/fpm/conf.d/20-apc.ini
+
+# Доустанавливаем нужное ПО
+apt-get install phpmyadmin
+
+Допистаь перенеос в вар/ццц и запуск + жоступнсть с любого адреса домена

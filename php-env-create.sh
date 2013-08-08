@@ -214,6 +214,7 @@ server {
     location ~* \.(jpg|jpeg|gif|png|ico|css|js|swf)$ {
 		expires max;
 		root /home/$USER/www/public_html;
+		log_not_found off;
 	}
 }
 	" > /etc/nginx/sites-available//$USER.conf
