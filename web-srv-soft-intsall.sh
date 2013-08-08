@@ -29,7 +29,7 @@ read -p "Введте название группы, которой будет �
 ###### НАСТРОЙКИ ОС ######
 
 # Обновляем систему
-apt-get update && apt-get upgrade
+apt-get update && apt-get upgrade -y
 
 # Добавляем группу для пользователей SFTP
 groupadd $SFTP_GROUP
@@ -117,3 +117,101 @@ echo kernel.shmall = 268435456  >> /etc/sysctl.conf
 
 ###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
 
+# Устанавливаем MariaDB 10
+apt-get install software-properties-common -y
+apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+add-apt-repository 'deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main'
+
+apt-get update
+apt-get install mariadb-server -y
+
+# Устанавливаем ПО, необходимое для работы сайтов
+apt-get install nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
+
+###### БАЗОВЫЕ НАСТРОЙКИ ######
+
+mkdir /var/log/phpfpm-slowlog
+
+# NGINX
+mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.orig
+echo "
+# Пользователь с правами которого работает nginx
+user www-data;
+
+# Директива задаёт приоритет рабочих процессов от -20 до 20 (отрицательное число означает более высокий приоритет). 
+worker_priority -5;
+
+# Уменьшает число системных вызовов gettimeofday(), что приводит к увеличению производительности
+timer_resolution 100ms;
+
+# Рекомендуется устанавливать по числу ядер
+worker_processes 4;
+
+pid /var/run/nginx.pid;
+worker_rlimit_nofile 8192;
+
+events {
+
+# Максимальное число подключений к серверу на один worker-процесс
+worker_connections 1024;
+
+# Эффективный метод обработки соединений, используемый в Linux 2.6+
+use epoll;
+}
+
+http {
+# Базовые настройки
+    
+    # Организовываем кеш для FastCGI сервера, я использую раздел в ram
+    fastcgi_cache_path /tmp/fcgi-cache/ levels=1:2   keys_zone=one:50m;
+
+    # Используем sendfile, но осторожно, если надо отдавать большие файлы, то sendfile случается вредит
+    sendfile on;
+
+    # Расширяем буфера отдачи
+    #output_buffers   32 512k;
+
+    # Ограничиваем размер сегмента отправляемой за одну блокируемую отдачу
+    sendfile_max_chunk  128k;
+
+    # Буфер отдачи которы используется для обрабатываемых данных
+    postpone_output  1460;
+
+    # Размер хеша для доменных имен.
+    server_names_hash_bucket_size 64;
+
+    # Размер данных принемаемых post запросом
+    client_max_body_size 15m;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        # При ошибках не говорим врагу версию nginx
+        server_tokens off;
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+	# Настройка логов
+	access_log /var/log/nginx/access.log;
+	error_log /var/log/nginx/error.log;
+
+	# Настройки сжатия
+    gzip on;
+    gzip_disable "msie6";
+    ssi on;
+    gzip_min_length 1100;
+  	gzip_buffers 64 8k;
+  	gzip_comp_level 3;
+  	gzip_http_version 1.1;
+  	gzip_proxied any;
+  	gzip_types text/plain application/xml application/x-javascript text/css;
+
+	# Настройка виртуальных доменов
+	include /etc/nginx/conf.d/*.conf;
+	include /etc/nginx/sites-enabled/*.conf;
+}
+" > /etc/nginx/nginx.conf
+
+
+echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini
+echo cgi.fix_pathinfo = 0 >> /etc/php5/fpm/php.ini 

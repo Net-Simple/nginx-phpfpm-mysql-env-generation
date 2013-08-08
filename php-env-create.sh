@@ -144,6 +144,11 @@ server {
 	location /
 	{
         try_files $uri $uri/ /index.php?q=$uri&$args;
+
+        open_file_cache max=1024 inactive=600s;
+		open_file_cache_valid 2000s;
+		open_file_cache_min_uses 1;
+		open_file_cache_errors on;
 	}
 
 	# Закрываем доступ к файлами .htaccess и .htpassword
@@ -204,9 +209,13 @@ server {
         # Путь к скрипту, который будет передан в php-fpm
         fastcgi_param       SCRIPT_FILENAME  $document_root$fastcgi_script_name;
         fastcgi_ignore_client_abort     off;
-	}			
-}
+    }
 
+    location ~* \.(jpg|jpeg|gif|png|ico|css|js|swf)$ {
+		expires max;
+		root /home/$USER/www/public_html;
+	}
+}
 	" > /etc/nginx/sites-available//$USER.conf
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА PHP-FPM ######
@@ -228,6 +237,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
 php_admin_value[cgi.fix_pathinfo] = 0
 php_admin_value[date.timezone] = Europe/Moscow
 php_admin_value[session.save_path] = /home/$USER/www/tmp
+php_admin_value[session.auto_start] = 0
 
 slowlog = /var/log/phpfpm-slowlog/$USER-php-slow.log
 
