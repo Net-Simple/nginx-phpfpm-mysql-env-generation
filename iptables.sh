@@ -1,79 +1,81 @@
 #!/bin/bash
-### Скрипт конфигурации IPTables ###
+#####################################################################
 
-# Очищаем предыдущие записи
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t nat -X
-iptables -t mangle -F
-iptables -t mangle -X 
+# 1) Clear old Rules
+iptables -F 												# Delete all existing rules
 
-# Установка политик по умолчанию
-iptables -P INPUT DROP
-iptables -P FORWARD ACCEPT
-iptables -P OUTPUT ACCEPT
+# 2) Default Drop
+iptables -P INPUT DROP											# Set default chain policies to DROP
+iptables -P FORWARD DROP										# Set default chain policies to DROP
+iptables -P OUTPUT DROP											# Set default chain policies to DROP
 
-# Разрешаем локальный интерфейс
-iptables -A INPUT -i lo -j ACCEPT
+# 3) Loopback 													
+iptables -A INPUT -i lo -j ACCEPT									# Allow loopback access from INPUT
+iptables -A OUTPUT -o lo -j ACCEPT									# Allow loopback access from Output
 
-# Простая защита от DoS-атаки
-iptables -A INPUT -p tcp -m tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j ACCEPT
+# 4) BLACKLIST IP's
+# iptables -A INPUT -s "BLOCK_THIS_IP" -j DROP								# Block a specific ip-address
+# iptables -A INPUT -s "BLOCK_THIS_IP" -j DROP								# Block a specific ip-address
+# iptables -A INPUT -s "BLOCK_THIS_IP" -j DROP								# Block a specific ip-address
+# iptables -A INPUT -s "BLOCK_THIS_IP" -j DROP								# Block a specific ip-address
 
-# Защита от спуфинга
-iptables -I INPUT -m conntrack --ctstate NEW,INVALID -p tcp --tcp-flags SYN,ACK SYN,ACK -j REJECT --reject-with tcp-reset
-# Защита от попытки открыть входящее соединение TCP не через SYN
-iptables -I INPUT -m conntrack --ctstate NEW -p tcp ! --syn -j DROP
-
-# Закрываемся от кривого icmp
-iptables -I INPUT -p icmp -f -j DROP
-# REL, ESTB allow
-iptables -A INPUT -p tcp -m state --state RELATED,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p udp -m state --state RELATED,ESTABLISHED -j ACCEPT
-
-# Начнем с базовых вещей. Разрешим передачу трафика уже открытым соединениям:
-iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-
-# Разрешение главных типов протокола ICMP
-iptables -A INPUT -p icmp --icmp-type 3 -j ACCEPT
-iptables -A INPUT -p icmp --icmp-type 11 -j ACCEPT
-iptables -A INPUT -p icmp --icmp-type 12 -j ACCEPT
-
-# Защита сервера SSH от брутфорса
-iptables -A INPUT -p tcp --syn --dport 22 -m recent --name dmitro --set
-iptables -A INPUT -p tcp --syn --dport 22 -m recent --name dmitro --update --seconds 30 --hitcount 3 -j DROP
-iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+# 5) WHITELIST IP's
+iptables -A INPUT -s 127.0.0.1/32 -j ACCEPT								# Allow Anything from localhost 	
+iptables -A INPUT -s "ALLOW_THIS_IP"/32 -j ACCEPT								# Allow Anything from KeyServer
 
 
-# Для работы OpenVPN #
-/sbin/modprobe ip_tables
-/sbin/modprobe iptable_filter
-/sbin/modprobe iptable_mangle
-/sbin/modprobe iptable_nat
-echo 1 > /proc/sys/net/ipv4/ip_forward
-sysctl -p
-iptables -I FORWARD 1 -i tap0 -p udp -j ACCEPT
-iptables -I FORWARD 1 -i tap0 -p tcp -j ACCEPT
-iptables -t nat -A POSTROUTING -s 192.168.231.0/24 -o eth0 -j SNAT --to-source 111.111.231.242
-iptables -A INPUT -p udp --dport 1194 -j ACCEPT
-#
-iptables -A INPUT -j REJECT --reject-with icmp-host-prohibited
+# 6) ALLOWED SERVICES
+iptables -A OUTPUT -o eth0 -p tcp --sport 25 -m state --state ESTABLISHED -j ACCEPT			# PORT 25   SMTP   - Allow connections to outbound
+iptables -A OUTPUT -p udp -o eth0 --dport 53 -j ACCEPT							# PORT 54   DNS    - Allow connections to outbound 
+iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT			# PORT 80   httpd  - Allow connections from anywhere
+iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT		# PORT 80   httpd  - Rate Limit from outside
+iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT			# PORT 443  SSL    - Allow connections from anywhere
+
+# 7) PING
+iptables -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP				# Drop Ping from address-mask-request
+iptables -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP					# Drop Ping from timestamp-request
+iptables -A INPUT -p icmp -m icmp -m limit --limit 1/second -j ACCEPT 					# Rate Limit Ping from outside 
+
+# 8) Validate packets
+iptables -A INPUT   -m state --state INVALID -j DROP							# Drop invalid packets 
+iptables -A FORWARD -m state --state INVALID -j DROP							# Drop invalid packets 
+iptables -A OUTPUT  -m state --state INVALID -j DROP							# Drop invalid packets 
+iptables -A INPUT -p tcp -m tcp --tcp-flags SYN,FIN SYN,FIN -j DROP					# Drop TCP - SYN,FIN packets 
+iptables -A INPUT -p tcp -m tcp --tcp-flags SYN,RST SYN,RST -j DROP					# Drop TCP - SYN,RST packets 
+
+# 9) Reject Invalid networks (Spoof)
+iptables -A INPUT -s 10.0.0.0/8       -j DROP								# (Spoofed network)
+iptables -a INPUT -s 192.0.0.1/24     -j DROP								# (Spoofed network)
+iptables -A INPUT -s 169.254.0.0/16   -j DROP								# (Spoofed network)
+iptables -A INPUT -s 172.16.0.0/12    -j DROP								# (Spoofed network)
+iptables -A INPUT -s 224.0.0.0/4      -j DROP								# (Spoofed network)
+iptables -A INPUT -d 224.0.0.0/4      -j DROP								# (Spoofed network)
+iptables -A INPUT -s 240.0.0.0/5      -j DROP								# (Spoofed network)
+iptables -A INPUT -d 240.0.0.0/5      -j DROP								# (Spoofed network)
+iptables -A INPUT -s 0.0.0.0/8        -j DROP								# (Spoofed network)
+iptables -A INPUT -d 0.0.0.0/8        -j DROP								# (Spoofed network)
+iptables -A INPUT -d 239.255.255.0/24 -j DROP								# (Spoofed network)
+iptables -A INPUT -d 255.255.255.255  -j DROP								# (Spoofed network)
 
 
-# Просмотр
-iptables -L --line-number
-echo
-echo "Adding DONE, maybe OK"
-echo "Saving to rc, PSE wait!"
-service iptables save
-echo
-service iptables restart
-echo "Done"
+# 10) CHAINS
 
-service iptables restart
-service network restart
-service openvpn restart
+# FTP_BRUTE CHAIN
+# iptables -A INPUT -p tcp -m multiport --dports 20,21 -m state --state NEW -m recent --set --name FTP_BRUTE
+# iptables -A INPUT -p tcp -m multiport --dports 20,21 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --rttl --name FTP_BRUTE -j DROP
 
-iptables -A INPUT -p tcp --dport 8083 -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# SYNFLOOD CHAIN
+iptables -A INPUT -m state --state NEW -p tcp -m tcp --syn -m recent --name SYNFLOOD--set						
+iptables -A INPUT -m state --state NEW -p tcp -m tcp --syn -m recent --name SYNFLOOD --update --seconds 1 --hitcount 60 -j DROP
+
+# Logging CHAIN
+iptables -N LOGGING												# Create `LOGGING` chain for logging denied packets
+iptables -A INPUT -j LOGGING											# Create `LOGGING` chain for logging denied packets 	
+iptables -A LOGGING -m limit --limit 2/min -j LOG --log-prefix "IPTables Packet Dropped: " --log-level 6	# Log denied packets to /var/log/messages
+iptables -A LOGGING -j DROP	
+
+
+
+
+
+
