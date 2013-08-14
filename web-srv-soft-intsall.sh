@@ -90,18 +90,29 @@ ForceCommand internal-sftp
 
 ###### ТЮНИНГУЕМ ЯДРО ######
 
+# Защита от SYN-флуда
 echo net.ipv4.tcp_syncookies = 1 >> /etc/sysctl.conf
+
 echo net.ipv4.icmp_echo_ignore_all = 1 >> /etc/sysctl.conf
-echo net.ipv4.tcp_max_syn_backlog = 4096 >> /etc/sysctl.conf
-echo net.core.netdev_max_backlog = 30000 >> /etc/sysctl.conf
 echo net.ipv4.tcp_synack_retries = 1 >> /etc/sysctl.conf
+# Защита от спуфинга
+echo net.ipv4.conf.all.rp_filter = 1  >> /etc/sysctl.conf
 echo net.ipv4.conf.default.rp_filter = 1 >> /etc/sysctl.conf
+
 echo net.ipv4.tcp_keepalive_time = 60 >> /etc/sysctl.conf
 echo net.ipv4.tcp_keepalive_intvl = 10 >> /etc/sysctl.conf
 echo net.ipv4.tcp_keepalive_probes = 5 >> /etc/sysctl.conf
+# Запрещаем маршрутизацию от источника
 echo net.ipv4.conf.all.accept_source_route = 0 >> /etc/sysctl.conf
+echo net.ipv4.conf.default.accept_source_route = 0 >> /etc/sysctl.conf
 echo net.ipv4.conf.all.accept_redirects = 0 >> /etc/sysctl.conf
+# Защита от smurf-атак
 echo net.ipv4.icmp_echo_ignore_broadcasts = 1 >> /etc/sysctl.conf
+# Мы не маршрутизатор
+echo net.ipv4.ip_forward = 0 >> /etc/sysctl.conf
+echo net.ipv4.conf.all.send_redirects = 0 >> /etc/sysctl.conf
+echo net.ipv4.conf.default.send_redirects = 0 >> /etc/sysctl.conf
+# Увеличиваем максимальный размер TCP-буферов
 echo net.core.somaxconn = 4096  >> /etc/sysctl.conf
 echo net.ipv4.tcp_max_orphans = 2255360  >> /etc/sysctl.conf
 echo net.ipv4.tcp_fin_timeout = 10  >> /etc/sysctl.conf
@@ -109,6 +120,14 @@ echo kernel.msgmnb = 65536  >> /etc/sysctl.conf
 echo kernel.msgmax = 65536  >> /etc/sysctl.conf
 echo kernel.shmmax = 494967295  >> /etc/sysctl.conf
 echo kernel.shmall = 268435456  >> /etc/sysctl.conf
+echo net.ipv4.tcp_max_syn_backlog = 4096 >> /etc/sysctl.conf
+echo net.core.netdev_max_backlog = 30000 >> /etc/sysctl.conf
+echo net.ipv4.tcp_window_scaling = 1 >> /etc/sysctl.conf
+# Защита от неправильных ICMP-сообщений
+echo net.ipv4.icmp_ignore_bogus_error_responses = 1 >> /etc/sysctl.conf
+# Включаем ExecShield
+echo kernel.exec-shield = 1 /etc/sysctl.conf
+echo kernel.randomize_va_space = 1 /etc/sysctl.conf
 
 ###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
 
@@ -164,6 +183,15 @@ http {
     
     # Организовываем кеш для FastCGI сервера, я использую раздел в ram
     fastcgi_cache_path /tmp/fcgi-cache/ levels=1:2   keys_zone=one:50m;
+
+
+    # Директива описывает зону, в которой хранятся состояния сессий. 
+    # Значения сессий определяется заданной переменной. 
+    # В данном случае состояния сессий хранятся в зоне "two" размером 
+    # 10 мегабайт и средняя скорость запросов для этой зоны не может 
+    # более 5 запросов в секунду.     
+    limit_req_zone $binary_remote_addr zone=two:10m  rate=5r/s;
+
 
     # Используем sendfile, но осторожно, если надо отдавать большие файлы, то sendfile случается вредит
     sendfile on;
@@ -235,6 +263,7 @@ http {
 
 echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini
 echo cgi.fix_pathinfo = 0 >> /etc/php5/fpm/php.ini 
+
 echo "
 apc.enabled=1
 apc.shm_segments=1
@@ -250,3 +279,4 @@ apc.enable_cli=1
 apc.rfc1867=1
 " >> /etc/php5/fpm/conf.d/20-apc.ini
 
+exit

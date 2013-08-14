@@ -155,6 +155,16 @@ server {
 		open_file_cache_valid 2000s;
 		open_file_cache_min_uses 1;
 		open_file_cache_errors on;
+
+            # Директива задаёт зону (zone) и максимально возможные всплески
+            # запросов (burst). Если скорость запросов превышает описанную 
+            # в зоне, то их обработка запроса задерживается так, чтобы запросы 
+            # обрабатывались с заданной скоростью. Избыточные запросы задерживаются
+            # до тех пор, пока их число не превысит 
+            # заданное число всплесков. В этом случае запрос завершается кодом 
+            # "Service unavailable" (503).
+            
+            limit_req  zone=two burst=4;		
 	}
 
 	# Закрываем доступ к файлами .htaccess и .htpassword
@@ -226,7 +236,7 @@ server {
 
 	# Запрещаем хотлинк
 	location ~* \.(jpg|jpeg|gif|png|ico|swf)$ {
-		valid_referers none blocked www.host.com host.com;
+		valid_referers none blocked $USER www.$USER;
 		if ($invalid_referer) {
 			return 403;
 		}
@@ -246,14 +256,21 @@ group = $USER
 chdir = /home/$USER/www
 
 php_admin_value[upload_tmp_dir] = /home/$USER/www/tmp
-php_admin_value[upload_max_filesize] = 10M
-php_admin_value[post_max_size] = 10M
+php_admin_value[upload_max_filesize] = 15M
+php_admin_value[post_max_size] = 15M
 php_admin_value[open_basedir] = /home/$USER/www/
-php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,popen,curl_multi_exec,parse_ini_file,show_source
+php_admin_value[disable_functions] = phpinfo,exec,passthru,shell_exec,system,proc_open,popen,curl_multi_exec,parse_ini_file,show_source
 php_admin_value[cgi.fix_pathinfo] = 0
 php_admin_value[date.timezone] = Europe/Moscow
 php_admin_value[session.save_path] = /home/$USER/www/tmp
 php_admin_value[session.auto_start] = 0
+php_admin_value[max_execution_time] = 30
+php_admin_value[max_input_time] = 60
+php_admin_value[memory_limit] = 8M
+php_admin_value[display_errors] = Off
+php_admin_value[expose_php] = Off
+php_admin_value[log_errors] = On
+php_admin_value[allow_url_fopen] = Off
 
 request_slowlog_timeout = 5s
 slowlog = /var/log/phpfpm-slowlog/$USER-php-slow.log
