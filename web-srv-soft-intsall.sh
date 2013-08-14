@@ -3,12 +3,7 @@
 #######################################################################################
 #                                                                                     #
 # Скрипт автоматической установки ПО и базовых настроек безопасности                  #
-# для последующего развертывания PHP-приложений.                                      #
-# Создается пользователь, все необходимые каталоги, устанавливаются права             #
-# Создается пользователь и база данных MySQL                                          #
-# Создаются все необходимые конфигурационные файлы (nginx, php5-fpm, backup)          #
-# Перезапускаются сервисы (nginx, php5-fpm)                                           #
-# На e-mail администратора сайта высылается уведомление с всеми параметрами           #                                                        #
+# для последующего развертывания PHP-приложений.                                      #                                             #
 #                                                                                     #
 # Скрипт разработан в компании Net-Simple. Разрешено свободное использование          #
 # http://net-simple.ru info@net-simple.ru                                             #
@@ -135,8 +130,10 @@ mkdir /var/log/phpfpm-slowlog
 
 # NGINX
 
+# Копируем оригинальный конфиг в отдельный файл
 mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.orig
 
+# Создаем свой основной конфиг для Nginx
 echo "
 # Пользователь с правами которого работает nginx
 user www-data;
@@ -187,12 +184,30 @@ http {
     client_max_body_size 15m;
         tcp_nopush on;
         tcp_nodelay on;
-        keepalive_timeout 65;
+        keepalive_timeout 5 5;
         types_hash_max_size 2048;
         # При ошибках не говорим врагу версию nginx
         server_tokens off;
         include /etc/nginx/mime.types;
         default_type application/octet-stream;
+
+    # Максимальный размер буфера для хранения тела запроса клиента
+	client_body_buffer_size 1K;
+
+	# Максимальный размер буфера для хранения заголовков запроса клиента
+	client_header_buffer_size 1k;
+
+	# Количество и размер буферов для чтения большого заголовка запроса клиента
+	large_client_header_buffers 2 1k;
+
+	# Таймаут при чтении тела запроса клиента
+	client_body_timeout 10;
+
+	# Таймаут при чтении заголовка запроса клиента
+	client_header_timeout 10;
+
+	# Таймаут при передаче ответа клиенту
+	send_timeout 10;
 
 	# Настройка логов
 	access_log /var/log/nginx/access.log;
@@ -214,6 +229,8 @@ http {
 	include /etc/nginx/sites-enabled/*.conf;
 }
 " > /etc/nginx/nginx.conf
+
+# Немного повышаем безопасность
 
 
 echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini

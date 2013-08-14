@@ -127,6 +127,12 @@ SFTP_GROUP=`grep -r 'Match Group' /etc/ssh/sshd_config | awk '{print $3}'` # Г�
 upstream backend-$USER {server unix:/var/run/$USER-phpfpm-pool.sock}
 
 server {
+
+	# Ограничиваем количество доступных методов обращения к Web-серверу
+	if ($request_method !~ ^(GET|HEAD|POST)$ ) {
+		return 444;
+	}
+
 	# Указываем домен
     server_name $USER www.$USER;
 
@@ -211,10 +217,19 @@ server {
         fastcgi_ignore_client_abort     off;
     }
 
+    # Устанавливаем срок кеширования статики на стороне клиента
     location ~* \.(jpg|jpeg|gif|png|ico|css|js|swf)$ {
 		expires max;
 		root /home/$USER/www/public_html;
 		log_not_found off;
+	}
+
+	# Запрещаем хотлинк
+	location ~* \.(jpg|jpeg|gif|png|ico|swf)$ {
+		valid_referers none blocked www.host.com host.com;
+		if ($invalid_referer) {
+			return 403;
+		}
 	}
 }
 	" > /etc/nginx/sites-available//$USER.conf
