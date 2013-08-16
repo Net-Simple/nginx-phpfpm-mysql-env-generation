@@ -94,8 +94,8 @@ SFTP_GROUP=`grep -r 'Match Group' /etc/ssh/sshd_config | awk '{print $3}'` # Г�
 	
 	# Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
 	groupadd $USER
-	useradd $USER -G $SFTP_GROUP -g $USER -s /bin/false -d /home/$USER/ # Создаем пользователя
-	echo -e ""$SFTP_PASS"\n"$SFTP_PASS"" | passwd --quiet $USER
+	useradd $USER -G $SFTP_GROUP -g $USER -s /bin/false -d /home/$USER/ -p"$SFTP_PASS" # Создаем пользователя
+	# echo -e ""$SFTP_PASS"\n"$SFTP_PASS"" | passwd --quiet $USER
 
 	# Назначаем владельцем домашнего каталога пользователя root. Необходимо для chroot SFTP
 	chown root:$SFTP_GROUP /home/$USER

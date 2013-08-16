@@ -12,8 +12,11 @@
 
 ###### ПЕРЕМЕННЫЕ ИСПОЛЬЗУЕМЫЕ В СКРИПТЕ ######
 
-SSH_PORT="" # Устанавливаемый порт для подключения по SSH-протоколу
-SFTP_GROUP="" # Группа, пользователи которой будут иметь доступ к SFTP
+SSH_PORT=""			# Устанавливаемый порт для подключения по SSH-протоколу
+SFTP_GROUP=""		# Группа, пользователи которой будут иметь доступ к SFTP
+SUDO_USER=""		# Административный пользователь с правами на sudo 
+SUDO_USER_PASS=""	# Пароль sudoer'а
+SUDO_GROUP="sudo"	# Группа судоеров
 
 ###### ПОЛУЧЕНИЕ НЕОБХОДИЫХ ДАННЫХ ######
 
@@ -29,7 +32,7 @@ apt-get update && apt-get upgrade -y
 # Добавляем группу для пользователей SFTP
 groupadd $SFTP_GROUP
 
-# Делаем резервную копию оригинальных настроек SSH-сервера и заменяем на свои
+### Делаем резервную копию оригинальных настроек SSH-сервера и заменяем на свои
 mv /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
 
 echo "
@@ -131,7 +134,7 @@ echo kernel.randomize_va_space = 1 /etc/sysctl.conf
 
 ###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
 
-# Устанавливаем MariaDB 10
+### Устанавливаем MariaDB 10
 apt-get install software-properties-common -y
 apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 add-apt-repository 'deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main'
@@ -140,14 +143,26 @@ apt-get update
 apt-get install mariadb-server -y
 
 # Устанавливаем ПО, необходимое для работы сайтов
-apt-get install nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
+apt-get install mc htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
 
 ###### БАЗОВЫЕ НАСТРОЙКИ ######
+
+### Создание пользователя SUDOER'а
+
+# Генерация пароля пользователя SFTP
+SUDO_USER_PASS=`pwgen -c -n -y 25 1`
+
+# Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
+groupadd $SUDO_USER
+useradd $SUDO_USER -g $SUDO_USER -G $SUDO_GROUP -s /bin/bash -m -b -p"$SUDO_USER_PASS" # Создаем пользователя
+
+# Назначаем владельцем домашнего каталога пользователя root. Необходимо для chroot SFTP
+chown $SUDO_USERЖ:SUDO_USER /home/$SUDO_USER
 
 # Создаем каталог для логов медленных запросов php
 mkdir /var/log/phpfpm-slowlog
 
-# NGINX
+### NGINX
 
 # Копируем оригинальный конфиг в отдельный файл
 mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.orig
@@ -258,7 +273,7 @@ http {
 }
 " > /etc/nginx/nginx.conf
 
-# Немного повышаем безопасность
+### Немного повышаем безопасность
 
 echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini
 echo cgi.fix_pathinfo = 0 >> /etc/php5/fpm/php.ini 
