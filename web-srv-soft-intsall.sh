@@ -24,10 +24,11 @@ ADMIN_EMAIL=""		# E-Mail администратора сервера
 ###### ПОЛУЧЕНИЕ НЕОБХОДИЫХ ДАННЫХ ######
 
 clear
-read -p "Введите новый порт SSH:                            " SSH_PORT
-read -p "Введите название группы, которой будет дан доступ по SFTP: " SFTP_GROUP
-read -p "Введите новый пароль пользователя root" ROOT_PASS
-read -p "Введите e-mail администратора сервера:     " ADMIN_EMAIL
+read -p "Введите новый порт SSH:											" SSH_PORT
+read -p "Введите название группы, которой будет дан доступ по SFTP:			" SFTP_GROUP
+read -p "Введите новый пароль пользователя root:							" ROOT_PASS
+read -p "Введите имя пользователя администратора сервера:					" SUDO_USER
+read -p "Введите e-mail администратора сервера:								" ADMIN_EMAIL
 
 # Определяем IP сервера
 DEV="eth0";
@@ -163,11 +164,14 @@ deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
 deb-src http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
 " > /etc/apt/sources.list.d/mariadb.list
 
-apt-get update
-apt-get install mariadb-server mariadb-client -y
+# Еще раз обновляем список пакетов и систему
+apt-get update && apt-get upgrade -y
 
 # Устанавливаем ПО, необходимое для работы сайтов
-apt-get install mc htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
+apt-get install mc software-properties-common htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
+echo "Основные компоненты установлены. Начинаем установку сервера БД"
+sleep 60
+apt-get install mariadb-server mariadb-client -y
 
 ###### БАЗОВЫЕ НАСТРОЙКИ ######
 
@@ -326,10 +330,11 @@ apc.rfc1867=1
 
 	Ниже приведены параметры окружения:
 
-	Пароль пользователя root: $ROOT_PASS
-	Пароль администратора сервера (пользователь: $SUDO_USER):  $SUDO_USER_PASS
-	Порт SSH/SFTP: $SSH_PORT
-	Группа пользователей, имеющих доступ по SFTP: $SFTP_GROUP
+	Пароль пользователя root:										$ROOT_PASS
+	Имя пользователя администратора сервера:						$SUDO_USER
+	Пароль администратора сервера (пользователь: $SUDO_USER):		$SUDO_USER_PASS
+	Порт SSH/SFTP:													$SSH_PORT
+	Группа пользователей, имеющих доступ по SFTP:					$SFTP_GROUP
 
 	Обращаем Ваше внимание, что для подключения к серверу необходимо использовать следующие параметры:
 
