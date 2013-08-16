@@ -3,6 +3,11 @@
 
 # 1) Clear old Rules
 iptables -F 												# Delete all existing rules
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
 
 # 2) Default Drop
 iptables -P INPUT DROP											# Set default chain policies to DROP
@@ -21,15 +26,17 @@ iptables -A OUTPUT -o lo -j ACCEPT									# Allow loopback access from Output
 
 # 5) WHITELIST IP's
 iptables -A INPUT -s 127.0.0.1/32 -j ACCEPT								# Allow Anything from localhost 	
-iptables -A INPUT -s "ALLOW_THIS_IP"/32 -j ACCEPT								# Allow Anything from KeyServer
+# iptables -A INPUT -s "ALLOW_THIS_IP"/32 -j ACCEPT								# Allow Anything from KeyServer
 
 
-# 6) ALLOWED SERVICES
-iptables -A OUTPUT -o eth0 -p tcp --sport 25 -m state --state ESTABLISHED -j ACCEPT			# PORT 25   SMTP   - Allow connections to outbound
-iptables -A OUTPUT -p udp -o eth0 --dport 53 -j ACCEPT							# PORT 54   DNS    - Allow connections to outbound 
+# 6) ALLOWED SERVICES	
+iptables -A OUTPUT -o eth0 -p tcp --sport 25 -m state --state ESTABLISHED -j ACCEPT				# PORT 25   SMTP   - Allow connections to outbound
+iptables -A OUTPUT -p udp -o eth0 --dport 53 -j ACCEPT											# PORT 54   DNS    - Allow connections to outbound 
+
 iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT			# PORT 80   httpd  - Allow connections from anywhere
-iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT		# PORT 80   httpd  - Rate Limit from outside
+# iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT	# PORT 80   httpd  - Rate Limit from outside
 iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT			# PORT 443  SSL    - Allow connections from anywhere
+# iptables -A INPUT -p tcp --dport 443 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT	# PORT 443   httpd  - Rate Limit from outside
 
 # 7) PING
 iptables -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP				# Drop Ping from address-mask-request
@@ -65,7 +72,7 @@ iptables -A INPUT -d 255.255.255.255  -j DROP								# (Spoofed network)
 # iptables -A INPUT -p tcp -m multiport --dports 20,21 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --rttl --name FTP_BRUTE -j DROP
 
 # SYNFLOOD CHAIN
-iptables -A INPUT -m state --state NEW -p tcp -m tcp --syn -m recent --name SYNFLOOD--set						
+iptables -A INPUT -m state --state NEW -p tcp -m tcp --syn -m recent --name SYNFLOOD --set						
 iptables -A INPUT -m state --state NEW -p tcp -m tcp --syn -m recent --name SYNFLOOD --update --seconds 1 --hitcount 60 -j DROP
 
 # Logging CHAIN
@@ -76,6 +83,9 @@ iptables -A LOGGING -j DROP
 
 
 
+# iptables -A INPUT -p tcp --dport 80 -m connlimit --connlimit-above 32 -j DROP
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
-
+# iptables -A INPUT -p udp --dport 53 -m connlimit --connlimit-above 8 -j DROP
+# iptables -A INPUT -p udp --dport 53 -j ACCEPT
 

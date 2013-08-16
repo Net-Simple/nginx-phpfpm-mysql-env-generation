@@ -260,7 +260,6 @@ http {
 
 # Немного повышаем безопасность
 
-
 echo php_admin_value session.auto_start 0 >> /etc/php5/fpm/php.ini
 echo cgi.fix_pathinfo = 0 >> /etc/php5/fpm/php.ini 
 
