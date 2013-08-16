@@ -178,12 +178,11 @@ apt-get install mc software-properties-common htop iptraf nginx php5-cli php5-co
 
 ### Создание пользователя SUDOER'а
 
-# Генерация пароля пользователя SFTP
-SUDO_USER_PASS=`pwgen -c -n -y 25 1`
-
 # Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
-groupadd $SUDO_USER
-useradd $SUDO_USER -g $SUDO_USER -G $SUDO_GROUP -s /bin/bash -m -b -p"$SUDO_USER_PASS" # Создаем пользователя
+SUDO_USER_PASS=`pwgen -c -n -y 25 1` # Генерируем будущий пароль административного пользователя
+adduser $SUDO_USER --quiet --gecos --disabled-password # Создаем пользователя
+adduser $SUDO_USER $SUDO_GROUP # Добавляем пользователя в группу судоеров
+echo "$SUDO_USER:$SUDO_USER_PASS" | chpasswd # Устанавливаем пользователю пароль
 
 # Назначаем владельцем домашнего каталога пользователя root. Необходимо для chroot SFTP
 chown $SUDO_USER:$SUDO_USER /home/$SUDO_USER
@@ -345,7 +344,7 @@ apc.rfc1867=1
 	Техническая поддержка Net-Simple.
 	https://net-simple.ru
 
-	" > /home/$SUDO_USER/server.txt
+	" >> /home/$SUDO_USER/server.txt
 
 	chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/server.txt
 
