@@ -164,14 +164,15 @@ deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
 deb-src http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
 " > /etc/apt/sources.list.d/mariadb.list
 
+# Добавляем PUB-key репозитрия TimeWeb для установки MariaDB
+apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+
 # Еще раз обновляем список пакетов и систему
 apt-get update && apt-get upgrade -y
 
 # Устанавливаем ПО, необходимое для работы сайтов
-apt-get install mc software-properties-common htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
-echo "Основные компоненты установлены. Начинаем установку сервера БД"
-sleep 60
 apt-get install mariadb-server mariadb-client -y
+apt-get install mc software-properties-common htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
 
 ###### БАЗОВЫЕ НАСТРОЙКИ ######
 
