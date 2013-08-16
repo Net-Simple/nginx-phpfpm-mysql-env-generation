@@ -151,12 +151,20 @@ echo kernel.randomize_va_space = 1 /etc/sysctl.conf
 ###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
 
 ### Устанавливаем MariaDB 10
-apt-get install software-properties-common -y
-apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
-add-apt-repository 'deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main'
+# apt-get install software-properties-common -y
+# apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+# add-apt-repository 'deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main'
+
+touch /etc/apt/sources.list.d/mariadb.list
+echo "
+# MariaDB 10.0 repository list - created 2013-08-16 15:10 UTC
+# http://mariadb.org/mariadb/repositories/
+deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
+deb-src http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main
+" > /etc/apt/sources.list.d/mariadb.list
 
 apt-get update
-apt-get install mariadb-server -y
+apt-get install mariadb-server mariadb-client -y
 
 # Устанавливаем ПО, необходимое для работы сайтов
 apt-get install mc htop iptraf nginx php5-cli php5-common php5-mysql php5-gd php5-fpm php5-cgi php-pear php5-mcrypt php-apc memcached php5-memcached postfix pwgen -y
