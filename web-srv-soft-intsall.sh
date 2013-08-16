@@ -24,11 +24,11 @@ ADMIN_EMAIL=""		# E-Mail администратора сервера
 ###### ПОЛУЧЕНИЕ НЕОБХОДИЫХ ДАННЫХ ######
 
 clear
-read -p "Введите новый порт SSH:											" SSH_PORT
-read -p "Введите название группы, которой будет дан доступ по SFTP:			" SFTP_GROUP
-read -p "Введите новый пароль пользователя root:							" ROOT_PASS
-read -p "Введите имя пользователя администратора сервера:					" SUDO_USER
-read -p "Введите e-mail администратора сервера:								" ADMIN_EMAIL
+read -p "Введите новый порт SSH:									" SSH_PORT
+read -p "Введите название группы, которой будет дан доступ по SFTP:	" SFTP_GROUP
+read -p "Введите новый пароль пользователя root:					" ROOT_PASS
+read -p "Введите имя пользователя администратора сервера:			" SUDO_USER
+read -p "Введите e-mail администратора сервера:						" ADMIN_EMAIL
 
 # Определяем IP сервера
 DEV="eth0";
@@ -151,11 +151,6 @@ echo kernel.randomize_va_space = 1 /etc/sysctl.conf
 
 ###### УСТАНАВЛИВАЕМ НУЖНОЕ ПО ######
 
-### Устанавливаем MariaDB 10
-# apt-get install software-properties-common -y
-# apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
-# add-apt-repository 'deb http://mirror.timeweb.ru/mariadb/repo/10.0/ubuntu raring main'
-
 touch /etc/apt/sources.list.d/mariadb.list
 echo "
 # MariaDB 10.0 repository list - created 2013-08-16 15:10 UTC
@@ -180,7 +175,7 @@ apt-get install mc software-properties-common htop iptraf nginx php5-cli php5-co
 
 # Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
 SUDO_USER_PASS=`pwgen -c -n -y 25 1` # Генерируем будущий пароль административного пользователя
-adduser $SUDO_USER --quiet --gecos --disabled-password # Создаем пользователя
+adduser $SUDO_USER --quiet --disabled-password --gecos "" # Создаем пользователя
 adduser $SUDO_USER $SUDO_GROUP # Добавляем пользователя в группу судоеров
 echo "$SUDO_USER:$SUDO_USER_PASS" | chpasswd # Устанавливаем пользователю пароль
 
@@ -323,6 +318,8 @@ apc.rfc1867=1
 
 ###### ВЫВОД И ОТПРАВКА ПО E-MAIL УЧЕТНЫХ И ПРОЧИХ НЕОБХОДИЫМХ ДАННЫХ ######
 
+touch /home/$SUDO_USER/server.txt
+
 	echo " 
 	Уважаемый, администратор сервера !
 
@@ -330,11 +327,11 @@ apc.rfc1867=1
 
 	Ниже приведены параметры окружения:
 
-	Пароль пользователя root:										$ROOT_PASS
-	Имя пользователя администратора сервера:						$SUDO_USER
-	Пароль администратора сервера (пользователь: $SUDO_USER):		$SUDO_USER_PASS
-	Порт SSH/SFTP:													$SSH_PORT
-	Группа пользователей, имеющих доступ по SFTP:					$SFTP_GROUP
+	Пароль пользователя root:	$ROOT_PASS
+	Имя пользователя администратора сервера:	$SUDO_USER
+	Пароль администратора сервера (пользователь: $SUDO_USER):	$SUDO_USER_PASS
+	Порт SSH/SFTP:	$SSH_PORT
+	Группа пользователей, имеющих доступ по SFTP:	$SFTP_GROUP
 
 	Обращаем Ваше внимание, что для подключения к серверу необходимо использовать следующие параметры:
 
@@ -344,11 +341,11 @@ apc.rfc1867=1
 	Техническая поддержка Net-Simple.
 	https://net-simple.ru
 
-	" >> /home/$SUDO_USER/server.txt
+	" > /home/$SUDO_USER/server.txt
 
 	chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/server.txt
 
 	cat /home/$SUDO_USER/server.txt
-	cat /home/$SUDO_USER/server.txt | iconv -f utf8 -t koi8-r | mail -s "Net-Simple: $USER site settings" $ADMIN_EMAIL
+	cat /home/$SUDO_USER/server.txt | mail -s "Net-Simple: $SERVER_IP server settings" $ADMIN_EMAIL
 
 exit
