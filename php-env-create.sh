@@ -159,7 +159,7 @@ server {
             # обрабатывались с заданной скоростью. Избыточные запросы задерживаются
             # до тех пор, пока их число не превысит 
             # заданное число всплесков. В этом случае запрос завершается кодом 
-            # "Service unavailable" (503).
+            # ""Service unavailable"" (503).
             
             # limit_req  zone=two burst=4;		
 	}
@@ -204,13 +204,13 @@ server {
         fastcgi_cache_valid 200 301 302 304 5m;
 
         # Формат ключа кеша - по этому ключу nginx находит правильную страничку
-        fastcgi_cache_key "$request_method|$host|$request_uri";
+        fastcgi_cache_key ""$request_method|$host|$request_uri"";
 
         # Если не использовать эту опцию - то в форумах все будут сидеть под именем первого вошедшего на форум
-        # fastcgi_hide_header "Set-Cookie";
+        # fastcgi_hide_header ""Set-Cookie"";
 
         # Этот запрос заставит nginx кешировать все что проходит через него
-        # fastcgi_ignore_headers "Cache-Control" "Expires";
+        # fastcgi_ignore_headers ""Cache-Control"" ""Expires"";
 
         fastcgi_index  index.php;
 
@@ -286,7 +286,7 @@ pm.max_spare_servers = 4
 #!/bin/bash
 
 OLD=2                                          # Сколько дней хранить резервные копии
-DATE=`date '+%F_%H-%M'`                        # Формат даты
+DATE="`date '+%F_%H-%M'`"                      # Формат даты
 
 # Создаем каталог под новый бекап
 
@@ -355,6 +355,6 @@ find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
 	chown -R $USER:$USER /home/$USER/$USER-site.txt
 
 	cat /home/$USER/$USER-site.txt
-	cat /home/$USER/$USER-site.txt | iconv -f utf8 -t koi8-r | mail -s "Net-Simple: $USER site settings" $USER_EMAIL
+	cat /home/$USER/$USER-site.txt | mail -s "Net-Simple: $USER site settings" $USER_EMAIL
 
 exit
