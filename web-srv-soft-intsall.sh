@@ -220,7 +220,7 @@ http {
 # Базовые настройки
     
     # Организовываем кеш для FastCGI сервера, я использую раздел в ram
-    fastcgi_cache_path /tmp/fcgi-cache/ levels=1:2   keys_zone=one:50m;
+    fastcgi_cache_path /tmp/fcgi-cache/ levels=1:2   keys_zone=one:150m;
 
 
     # Директива описывает зону, в которой хранятся состояния сессий. 
