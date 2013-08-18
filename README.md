@@ -15,4 +15,6 @@ cd nginx-phpfpm-mysql-env-generation
 chmod +x web-srv-soft-intsall.sh
 chmod +x php-env-create.sh
 
-bash eb-srv-soft-intsall.sh
+bash web-srv-soft-intsall.sh
+
+bewitchment.ru

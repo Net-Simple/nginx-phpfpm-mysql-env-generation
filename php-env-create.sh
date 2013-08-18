@@ -28,7 +28,6 @@ TIMEZONE="Europe/Moscow"
 CRON_BACKUP="0  3    * * *   $USER   " # Время и пользователь для создания резервных копий
 SERVER_IP="" # IP-адрес сервера
 SFTP_PORT=`grep -r 'Port' /etc/ssh/sshd_config | awk '{print $2}'` # Определяем SFTP
-PMA_ADDR="$USER/PhpMyAdmin" # Адрес PhpMyAdmin
 SFTP_GROUP=`grep -r 'Match Group' /etc/ssh/sshd_config | awk '{print $3}'` # Группа, члены которой имеют право на подключение по sftp
 
 ###### ПОЛУЧЕНИЕ НЕОБХОДИЫХ ДАННЫХ ######
@@ -86,7 +85,8 @@ SFTP_GROUP=`grep -r 'Match Group' /etc/ssh/sshd_config | awk '{print $3}'` # Г�
 
 	# Создаем пользователя/группу и задаем ему предварительно сгенерированный пароль
 	adduser $USER --quiet --disabled-password --shell /bin/false --force-badname --gecos "" # Создаем пользователя
-	adduser $USER $SFTP_GROUP # Добавляем пользователя в группу, имеющую доступ к sftp
+	usermod -g $SFTP_GROUP $USER # Добавляем пользователя в группу, имеющую доступ к sftp
+	usermod -G $USER $USER
 	echo "$USER:$SFTP_PASS" | chpasswd # Устанавливаем пользователю пароль
 
 	# Создаем необходимые каталоги
@@ -283,30 +283,6 @@ pm.max_spare_servers = 4
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА РЕЗЕРВНОГО КОПИРОВАНИЯ ######
 
 	echo "  
-#!/bin/bash
-
-OLD=2                                          # Сколько дней хранить резервные копии
-DATE="`date '+%F_%H-%M'`"                      # Формат даты
-
-# Создаем каталог под новый бекап
-
-mkdir /home/$USER/www/backups/$DATE
-cd /home/$USER/www/backups/$DATE
-
-# Создаем и архивируем резервную копию БД пользователя
-
-mysqldump -u '$USER' -p'$MYSQL_PASS' --skip-lock-tables '$MYSQL_DB' > DB-$MYSQL_DB.sql;
-
-tar -cjf ./DB-$MYSQL_DB.tar.bz2 ./DB-$MYSQL_DB.sql
-rm -rf ./DB-$MYSQL_DB.sql
-
-# Создаем архив резервной копии файлов сайта
-
-tar -cjf ./FILES-$USER.tar.bz2 /home/$USER/www/public_html
-
-# Проверяем наличие бекапов старее, чем определено в OLD и удаляем их
-
-find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
 
 	" > /home/$USER/www/backups/$USER-backup.sh
 
@@ -344,7 +320,6 @@ find /home/$USER/backups -mtime +$OLD -exec rm '{}' \;
 
 	IP-адрес сервера: $SERVER_IP
 	Порт SFTP: $SFTP_PORT
-	Адрес PhpMyAdmin: $PMA_ADDR
 
 	С Уважением,
 	Техническая поддержка Net-Simple.
