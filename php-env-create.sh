@@ -282,9 +282,21 @@ pm.max_spare_servers = 4
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА РЕЗЕРВНОГО КОПИРОВАНИЯ ######
 
-	echo "  
+	echo '#!/bin/bash\nDATA=`date +%Y-%m-%d`\n'"mkdir /home/$USER/www/backups/\$DATA
+                cd /home/$USER/www/backups/\$DATA
 
-	" > /home/$USER/www/backups/$USER-backup.sh
+                #бекап бд
+                 mysqldump -u $USER -p$MYSQL_PASS --skip-lock-tables $MYSQL_DB > DB-$MYSQL_DB.sql;
+
+                tar -cjf ./DB-$MYSQL_DB.tar.bz2 ./DB-$MYSQL_DB.sql
+                rm -rf ./DB-$MYSQL_DB.sql
+
+                #бекап файлов
+                tar -cjf ./FILES.tar.bz2 /home/$USER/www/public_html 
+
+                #удаление старых бекапов
+                find /home/$USER/www/backups/ -mtime +10 -exec rm '{}' \;
+        " > /home/$USER/www/backups/$USER-backup.sh
 
 	# Делаем скрипт резервного копирования исполняемым
 	chmod +x /home/$USER/www/backups/$USER-backup.sh
