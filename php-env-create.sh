@@ -141,7 +141,7 @@ server {
 	error_log /var/log/nginx/$USER-error.log;
 
 	# Какие файлы будут переданы браузеру при обращениик домену
-	index.html index.php;
+	index index.html index.php;
 
 	# Реализуем красивые ссылки для многих CMS
 	location /
@@ -282,21 +282,27 @@ pm.max_spare_servers = 4
 
 ###### СОЗДАНИЕ КОНФИГУРАЦИОННОГО ФАЙЛА РЕЗЕРВНОГО КОПИРОВАНИЯ ######
 
-	echo '#!/bin/bash\nDATA=`date +%Y-%m-%d`\n'"mkdir /home/$USER/www/backups/\$DATA
-                cd /home/$USER/www/backups/\$DATA
+	echo "
+#!/bin/bash
+DATA="`date +%Y-%m-%d`"
+OLD=2
 
-                #бекап бд
-                 mysqldump -u $USER -p$MYSQL_PASS --skip-lock-tables $MYSQL_DB > DB-$MYSQL_DB.sql;
+mkdir /home/$USER/www/backups/\$DATA
+cd /home/$USER/www/backups/\$DATA
 
-                tar -cjf ./DB-$MYSQL_DB.tar.bz2 ./DB-$MYSQL_DB.sql
-                rm -rf ./DB-$MYSQL_DB.sql
+#бекап бд
+mysqldump -u $USER -p$MYSQL_PASS --skip-lock-tables $MYSQL_DB > DB-$MYSQL_DB.sql;
 
-                #бекап файлов
-                tar -cjf ./FILES.tar.bz2 /home/$USER/www/public_html 
+tar -cjf ./DB-$MYSQL_DB.tar.bz2 ./DB-$MYSQL_DB.sql
+rm -rf ./DB-$MYSQL_DB.sql
 
-                #удаление старых бекапов
-                find /home/$USER/www/backups/ -mtime +10 -exec rm '{}' \;
-        " > /home/$USER/www/backups/$USER-backup.sh
+#бекап файлов
+tar -cjf ./FILES.tar.bz2 /home/$USER/www/public_html 
+
+#удаление старых бекапов
+find /home/$USER/www/backups/ -mtime +\$OLD -exec rm '{}' \;
+
+	" > /home/$USER/www/backups/$USER-backup.sh
 
 	# Делаем скрипт резервного копирования исполняемым
 	chmod +x /home/$USER/www/backups/$USER-backup.sh
