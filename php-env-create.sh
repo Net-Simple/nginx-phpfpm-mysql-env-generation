@@ -189,7 +189,7 @@ server {
 	location ~ \.php$
 	{
 		# Если файл не найден или ссылка не открывается, то будет открыта главная страница
-        try_files $uri =/;
+        try_files $uri /;
 
         # PHP-FPM слушает на Unix сокете
         fastcgi_pass   unix:/var/run/$USER-phpfpm-pool.sock;
